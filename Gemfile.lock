@@ -184,6 +184,7 @@ PLATFORMS
 
 DEPENDENCIES
   bootsnap (>= 1.4.2)
+  bundler (~> 1.17.2)
   byebug
   jbuilder (~> 2.7)
   puma (~> 4.1)
