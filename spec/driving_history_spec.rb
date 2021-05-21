@@ -32,9 +32,17 @@ RSpec.describe DrivingHistory do
       end
     end
 
+    context 'when a valid file is provided - A trip happens before a Driver' do
+      let(:file_contents) { "Driver A\nTrip C 07:15 07:45 15.9345\nDriver B\nTrip A 09:15 09:56 29.3\nTrip B 14:11 15:42 39.5\nDriver C" }
+      let(:expected_report) { "A: 29 miles @ 42 mph\nB: 40 miles @ 26 mph\nC: 16 miles @ 32 mph" }
+      it 'returns the intended result' do
+        expect(subject).to eq expected_report
+      end
+    end
+
     context 'when a valid file is provided - 1:5, 1:0, 1:0 - out of order' do
       let(:file_contents) { "Driver A\nTrip A 07:15 07:45 15.9345\nDriver B\nTrip A 09:15 09:56 29.3\nTrip A 14:11 15:42 39.5\nDriver C\nTrip A 11:15 14:56 89.3\nTrip A 19:15 21:56 59.3" }
-      let(:expected_report) { "A: 233 miles @ 29 mph\nC: 0 miles\nB: 0 miles" }
+      let(:expected_report) { "A: 233 miles @ 29 mph\nB: 0 miles\nC: 0 miles" }
       it 'returns the intended result' do
         expect(subject).to eq expected_report
       end

@@ -44,7 +44,7 @@ class DrivingHistory
       dt[:mph] = mph_calc(dt[:trips])
     end
 
-    driver_trips.sort_by { |dt| dt[:miles] }.reverse.each do |x|
+    driver_trips.sort_by { |dt| dt[:miles] }.reverse.sort_by { |dt| dt[:name] }.each do |x|
       output += "#{x[:name]}: #{x[:miles]} miles"
 
       if x[:miles] == 0
@@ -115,8 +115,9 @@ class DrivingHistory
 
         if driver_trips_array.empty? || dt_by_name.nil?
           driver_trips_array <<  {name: name, trips: [trip_instance(split)] }
+        else
+          dt_by_name[:trips] << trip_instance(split)
         end
-        dt_by_name[:trips] << trip_instance(split)
       else
         raise InvalidCommandError, "The provided #{split[0]} is invalid for this app."
       end
