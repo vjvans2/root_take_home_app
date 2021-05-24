@@ -1,10 +1,10 @@
 class DrivingHistory
-  FILE_REGEX = '^[A-Za-z0-9\/\_\ ]+\.txt$' # any combo of directories, text, underscores, spaces as long as it has a '.txt' at the end'
-
   attr_accessor :filepath, :file_data, :driver_trips_array
 
+  FILE_REGEX = '^[A-Za-z0-9\/\_\ ]+\.txt$' # any combo of directories, text, underscores, spaces as long as it has a '.txt' at the end'
   InvalidFileError = Class.new(StandardError)
   InvalidCommandError = Class.new(StandardError)
+  DelimiterError = Class.new(StandardError)
   NoDriversError = Class.new(StandardError)
 
   def initialize(filepath)
@@ -39,8 +39,8 @@ class DrivingHistory
   def generate_output(driver_trips)
     output = ''
     driver_trips.each do |dt|
-      dt[:miles] = total_miles_calc(dt[:trips])
       dt[:mph] = mph_calc(dt[:trips])
+      dt[:miles] = total_miles_calc(dt[:trips])
     end
 
     driver_trips.sort_by { |dt| dt[:miles] }.reverse.sort_by { |dt| dt[:name] }.each do |x|
@@ -61,7 +61,8 @@ class DrivingHistory
     return 0 if trips.empty?
 
     miles = 0
-    trips.each { |t| miles += t[:miles].to_f.round } # going "to_i" always rounds down, round with no params handles the int-ness
+    trips.select { |tr| !tr[:invalid]}
+         .each { |t| miles += t[:miles].to_f.round } # going "to_i" always rounds down, round with no params handles the int-ness
     miles
   end
 
@@ -75,20 +76,22 @@ class DrivingHistory
       finish = Time.parse(t[:end])
       miles = t[:miles].to_f.round
       hour_diff = (finish-start)/3600 # in seconds, /60 to get to minutes, /60 to get to hours
-      mphs << miles/hour_diff
+      trip_mph = miles/hour_diff
+
+      if trip_mph < 5 || trip_mph > 100
+        t[:invalid] = true
+        next
+      end
+
+      mphs << trip_mph
     end
 
-    (mphs.sum / mphs.length).round
+    (mphs.sum / mphs.length).round || 0
   end
 
   def file_valid?
-    # is the filepath a type .txt?  - this may be best got with a regex to check the last four char
-    raise InvalidFileError, 'file is not a .txt' if filepath.match(FILE_REGEX).nil?
-
-    # is the file populated?
-    raise InvalidFileError, 'file is not populated' if file_data.empty?
-
-    # is it delimited correctly?  Should we try to perceive it? 2.0? (could set up a delimiter as assumed parameter pending override)
+    raise InvalidFileError, 'The provided file is not a .txt type.' if filepath.match(FILE_REGEX).nil?
+    raise InvalidFileError, 'The provided file has no contents.' if file_data.empty?
   end
 
   def output_report
@@ -101,6 +104,8 @@ class DrivingHistory
       next if row.empty?
       
       split = row.split(' ')
+      raise DelimiterError, 'This file does not appear to be utilizing a space as a delimiter.' if split.length == 1
+
       name = split[1] # MARY SUE 
       dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
 
@@ -117,7 +122,7 @@ class DrivingHistory
           dt_by_name[:trips] << trip_instance(split)
         end
       else
-        raise InvalidCommandError, "The provided \"#{split[0]}\" is invalid for this app."
+        raise InvalidCommandError, "The provided \"#{split[0]}\" command is invalid for this app."
       end
 
     end

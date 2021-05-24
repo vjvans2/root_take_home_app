@@ -72,19 +72,42 @@ RSpec.describe DrivingHistory do
       end
     end
 
+    context 'when the driver is defined, but has an invalid fast trip' do
+      let(:file_contents) { "Driver A\nTrip A 07:15 07:45 30\nTrip A 16:00 16:01 200" }
+      let(:expected_report) { "A: 30 miles @ 60 mph" }
+      it 'should return a response for the valid trips of A' do
+        expect(subject).to eq expected_report
+      end
+    end
+
+    context 'when the driver is defined, but has an invalid slow trip' do
+      let(:file_contents) { "Driver A\nTrip A 07:15 07:45 30\nTrip A 16:00 16:01 2" }
+      let(:expected_report) { "A: 30 miles @ 60 mph" }
+      it 'should return a response for the valid trips of A' do
+        expect(subject).to eq expected_report
+      end
+    end
+
     # NOT_HAPPY PATHS
 
     context 'when an file is provided without a driver being declared for all trips' do
       let(:file_contents) { "Trip A 07:15 07:45 15.9345\nTrip B 14:11 15:42 39.5" }
       it 'should return a NoDriversError' do
-        expect { subject }.to raise_error described_class::NoDriversError, 'No drivers exist for the provided Trips'
+        expect(subject).to eq 'ERROR - DrivingHistory::NoDriversError: Drivers do not exist for all provided Trips'
       end
     end
 
     context 'when the file provided is an empty string' do
       let(:file_contents) { '' }
       it 'should return an InvalidFileError' do
-        expect { subject }.to raise_error described_class::InvalidFileError, 'file is not populated'
+        expect(subject).to eq 'ERROR - DrivingHistory::InvalidFileError: The provided file has no contents.'
+      end
+    end
+
+    context 'when the file provided is delimited incorrectly' do
+      let(:file_contents) { "Driver|A|\nTrip|A|07:15|07:45|15.9345" }
+      it 'should return a DelimiterError' do
+        expect(subject).to eq 'ERROR - DrivingHistory::DelimiterError: This file does not appear to be utilizing a space as a delimiter.'
       end
     end
 
@@ -92,7 +115,7 @@ RSpec.describe DrivingHistory do
       let(:file_contents) { "Driver A\nDriver B\nDriver C\nTrip A 07:15 07:45 15.9345\nTrip A 09:15 09:56 29.3\nTrip B 14:11 15:42 39.5" }
       let(:filename) { 'test_data.css' }
       it 'should return an InvalidFileError' do
-        expect { subject }.to raise_error described_class::InvalidFileError, 'file is not a .txt'
+        expect(subject).to eq 'ERROR - DrivingHistory::InvalidFileError: The provided file is not a .txt type.'
       end
     end
 
@@ -100,14 +123,14 @@ RSpec.describe DrivingHistory do
       let(:file_contents) { "Driver A\nDriver B\nDriver C\nTrip A 07:15 07:45 15.9345\nTrip A 09:15 09:56 29.3\nTrip B 14:11 15:42 39.5" }
       let(:filename) { 'test_data.ppt' }
       it 'should return an InvalidFileError' do
-        expect { subject }.to raise_error described_class::InvalidFileError, 'file is not a .txt'
+        expect(subject).to eq 'ERROR - DrivingHistory::InvalidFileError: The provided file is not a .txt type.'
       end
     end
 
     context 'when the file includes a command that is invalid' do
       let(:file_contents) { "Driver A\nTrip A 07:15 07:45 15.9345\nHi Mom" }
       it 'should return an InvalidFileError' do
-        expect { subject }.to raise_error described_class::InvalidCommandError, "The provided \"Hi\" is invalid for this app."
+        expect(subject).to eq 'ERROR - DrivingHistory::InvalidCommandError: The provided "Hi" command is invalid for this app.'
       end
     end
   end
