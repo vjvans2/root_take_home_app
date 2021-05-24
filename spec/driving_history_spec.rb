@@ -88,6 +88,22 @@ RSpec.describe DrivingHistory do
       end
     end
 
+    context 'when the driver is defined with a valid trip, but their name has a space' do
+      let(:file_contents) { "Driver Mary Sue\nTrip Mary Sue 07:15 07:45 30" }
+      let(:expected_report) { "Mary Sue: 30 miles @ 60 mph" }
+      it 'should return a response for the valid trips of A' do
+        expect(subject).to eq expected_report
+      end
+    end
+
+    context 'when there are single and spaced names within the same file' do
+      let(:file_contents) { "Driver Mary Sue\nTrip Mary Sue 07:15 07:45 15.9345\nDriver Jolly Green Giant\nTrip Mary Sue 09:15 09:56 29.3\nTrip His Majesty Queen Elizabeth II 14:11 15:42 39.5\nDriver His Majesty Queen Elizabeth II\nTrip Mary Sue 11:15 14:56 89.3\nTrip Mary Sue 19:15 21:56 59.3" }
+      let(:expected_report) { "His Majesty Queen Elizabeth II: 40 miles @ 26 mph\nJolly Green Giant: 0 miles\nMary Sue: 193 miles @ 30 mph" }
+      it 'should return a response as expected' do
+        expect(subject).to eq expected_report
+      end
+    end
+
     # NOT_HAPPY PATHS
 
     context 'when an file is provided without a driver being declared for all trips' do

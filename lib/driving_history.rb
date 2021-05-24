@@ -28,11 +28,11 @@ class DrivingHistory
 
   private
 
-  def trip_instance(split, single_word_name = true)
+  def trip_instance(split, name_differential)
     {
-      start: split[single_word_name ? 2 : 3], 
-      end: split[single_word_name ? 3 : 4],
-      miles: split[single_word_name ? 4 : 5],
+      start: split[2 + name_differential], 
+      end: split[3 + name_differential],
+      miles: split[4 + name_differential],
     }
   end
 
@@ -105,21 +105,27 @@ class DrivingHistory
       
       split = row.split(' ')
       raise DelimiterError, 'This file does not appear to be utilizing a space as a delimiter.' if split.length == 1
-
-      name = split[1] # MARY SUE 
-      dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
-
+      copy_split = split.dup
       if split[0] == 'Driver'
+        name = copy_split.tap(&:shift).join(' ')
+        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
+
         if driver_trips_array.empty? || driver_trips_array.select { |dt| dt[:name] == name }.empty?
             driver_trips_array <<  {name: name, trips: [], name_verified: true }
         elsif !dt_by_name.empty? && dt_by_name[:name_verified] == false
           dt_by_name[:name_verified] = true
         end
+
       elsif split[0] == 'Trip'
+        name_arr = copy_split.tap { |s| s.pop; s.pop; s.pop; s.shift; } #miles, end, start, command
+        name_differential = name_arr.length - 1
+        name = name_arr.join(' ') 
+        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
+
         if driver_trips_array.empty? || dt_by_name.nil?
-          driver_trips_array <<  {name: name, trips: [trip_instance(split)], name_verified: false }
+          driver_trips_array <<  {name: name, trips: [trip_instance(split, name_differential)], name_verified: false }
         else
-          dt_by_name[:trips] << trip_instance(split)
+          dt_by_name[:trips] << trip_instance(split, name_differential)
         end
       else
         raise InvalidCommandError, "The provided \"#{split[0]}\" command is invalid for this app."
