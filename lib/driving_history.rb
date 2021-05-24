@@ -5,6 +5,7 @@ class DrivingHistory
 
   InvalidFileError = Class.new(StandardError)
   InvalidCommandError = Class.new(StandardError)
+  NoDriversError = Class.new(StandardError)
 
   def initialize(filepath)
     @filepath = filepath
@@ -17,17 +18,15 @@ class DrivingHistory
   end
 
   def report
-    # catch and rescue errors for performance?
-    file_valid?
-    
-    output_report    
+    begin
+      file_valid?
+      output_report
+    rescue Exception => e
+      "ERROR - #{e.class}: #{e.message}"
+    end
   end
 
   private
-
-    # def driver_trips_by_name(name) # when I use this method it is an "undefined method" - why?
-  #   driver_trips_array.find { |dt| dt.key?(name) }
-  # end
 
   def trip_instance(split, single_word_name = true)
     {
@@ -102,27 +101,29 @@ class DrivingHistory
       next if row.empty?
       
       split = row.split(' ')
+      name = split[1] # MARY SUE 
+      dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
 
       if split[0] == 'Driver'
-        name = split[1] # MARY SUE if length > 2
         if driver_trips_array.empty? || driver_trips_array.select { |dt| dt[:name] == name }.empty?
-            driver_trips_array <<  {name: name, trips: [] }
+            driver_trips_array <<  {name: name, trips: [], name_verified: true }
+        elsif !dt_by_name.empty? && dt_by_name[:name_verified] == false
+          dt_by_name[:name_verified] = true
         end
       elsif split[0] == 'Trip'
-        name = split[1] # MARY SUE if length > 5
-        # single_word_name = split.length != EXPECTED_TRIP_LENGTH && Time.parse(split[2]).nil?
-        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
-
         if driver_trips_array.empty? || dt_by_name.nil?
-          driver_trips_array <<  {name: name, trips: [trip_instance(split)] }
+          driver_trips_array <<  {name: name, trips: [trip_instance(split)], name_verified: false }
         else
           dt_by_name[:trips] << trip_instance(split)
         end
       else
-        raise InvalidCommandError, "The provided #{split[0]} is invalid for this app."
+        raise InvalidCommandError, "The provided \"#{split[0]}\" is invalid for this app."
       end
 
     end
-    driver_trips_array
+
+    raise NoDriversError, 'Drivers do not exist for all provided Trips' if driver_trips_array.all? { |d| d[:name_verified] == false }
+
+    driver_trips_array.select { |d| d[:name_verified] == true}
   end
 end
