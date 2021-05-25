@@ -1,8 +1,7 @@
 # Problem Statement README
 
-#### How Do I Run?
-* navigate to it, and go `ruby launcher.rb file_name.txt`
-* something something tarball
+#### How Do I Run It?
+* Navigate to the folder with the `launcher.rb` in it, and go `ruby launcher.rb file_name.txt` assuming that "file_name.txt" is also in that same folder.
 
 #### Description
 
