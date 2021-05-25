@@ -1,10 +1,12 @@
 class DrivingHistory
+  require 'time'
 
-  FILE_REGEX = '^[A-Za-z0-9\/\_\ ]+\.txt$' # any combo of directories, text, underscores, spaces as long as it has a '.txt' at the end'
+  FILE_REGEX = '^[A-Za-z0-9\/\_\ ]+\.txt$'.freeze # any combo of directories, text, underscores, spaces as long as it has a '.txt' at the end'
   InvalidFileError = Class.new(StandardError)
   InvalidCommandError = Class.new(StandardError)
   DelimiterError = Class.new(StandardError)
   NoDriversError = Class.new(StandardError)
+  DriverTripsError = Class.new(StandardError)
 
   def initialize(filepath)
     @filepath = filepath
@@ -17,12 +19,10 @@ class DrivingHistory
   end
 
   def report
-    begin
-      file_valid?
-      output_report
-    rescue Exception => e
-      "ERROR - #{e.class}: #{e.message}"
-    end
+    file_valid?
+    output_report
+  rescue StandardError => e
+    "ERROR - #{e.class}: #{e.message}"
   end
 
   private
@@ -35,68 +35,71 @@ class DrivingHistory
   end
 
   def output_report
-    dt = get_driver_trips
+    dt = driver_trips
+    raise DriverTripsError if dt.empty? #shouldn't, but just in case
+
     generate_output(dt)
   end
-  
-  def get_driver_trips
+
+  def driver_trips
     file_data.each do |row|
       next if row.empty?
-      
+
       split = row.split(' ')
-      raise DelimiterError, 'This file does not appear to be utilizing a space as a delimiter.' if split.length == 1
       copy_split = split.dup
-      if split[0] == 'Driver'
+
+      raise DelimiterError, 'This file does not appear to be utilizing a space as a delimiter.' if split.length == 1
+
+      case split[0]
+      when 'Driver'
         name = copy_split.tap(&:shift).join(' ')
-        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
+        dt_by_name = driver_trip_by_name(name)
 
         if driver_trips_array.empty? || driver_trips_array.select { |dt| dt[:name] == name }.empty?
-            driver_trips_array <<  {name: name, trips: [], name_verified: true }
+          driver_trips_array <<  {name: name, trips: [], name_verified: true }
         elsif !dt_by_name.empty? && dt_by_name[:name_verified] == false
           dt_by_name[:name_verified] = true
         end
-
-      elsif split[0] == 'Trip'
+      when 'Trip'
         name_arr = copy_split.tap { |s| s.pop; s.pop; s.pop; s.shift; } #miles, end, start, command
-        name_differential = name_arr.length - 1
-        name = name_arr.join(' ') 
-        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
+        name_index_differential = name_arr.length - 1
+        name = name_arr.join(' ')
+        dt_by_name = driver_trip_by_name(name)
 
         if driver_trips_array.empty? || dt_by_name.nil?
-          driver_trips_array <<  {name: name, trips: [trip_instance(split, name_differential)], name_verified: false }
+          driver_trips_array << {name: name, trips: [trip_instance(split, name_index_differential)], name_verified: false }
         else
-          dt_by_name[:trips] << trip_instance(split, name_differential)
+          dt_by_name[:trips] << trip_instance(split, name_index_differential)
         end
       else
         raise InvalidCommandError, "The provided \"#{split[0]}\" command is invalid for this app."
       end
-
     end
 
-    raise NoDriversError, 'Drivers do not exist for all provided Trips' if driver_trips_array.all? { |d| d[:name_verified] == false }
+    raise NoDriversError, 'Drivers do not exist for all provided Trips' if
+      driver_trips_array.all? { |d| d[:name_verified] == false }
 
-    driver_trips_array.select { |d| d[:name_verified] == true}
+    formatted_driver_trips(driver_trips_array)
   end
 
-  def trip_instance(split, name_differential)
+  def driver_trip_by_name(name)
+    driver_trips_array.select { |dta| dta[:name] == name }.first
+  end
+
+  def trip_instance(split, name_index_differential)
     {
-      start: split[2 + name_differential], 
-      end: split[3 + name_differential],
-      miles: split[4 + name_differential],
+      start: split[2 + name_index_differential], 
+      end: split[3 + name_index_differential],
+      miles: split[4 + name_index_differential],
     }
   end
 
   def generate_output(driver_trips)
     output = ''
-    driver_trips.each do |dt|
-      dt[:mph] = mph_calc(dt[:trips])
-      dt[:miles] = total_miles_calc(dt[:trips])
-    end
-
-    driver_trips.sort_by { |dt| dt[:miles] }.reverse.sort_by { |dt| dt[:name] }.each do |x|
+    driver_trips.each do |x|
       output += "#{x[:name]}: #{x[:miles]} miles"
 
-      if x[:miles] == 0
+      if x[:miles].zero?
         output += "\n"
         next
       end
@@ -107,26 +110,40 @@ class DrivingHistory
     output.strip # the strip removes the final \n
   end
 
+  def formatted_driver_trips(driver_trips)
+    return [] if driver_trips.empty?
+
+    driver_trips.each do |dt|
+      dt[:mph] = mph_calc(dt[:trips])
+      dt[:miles] = total_miles_calc(dt[:trips])
+    end
+
+    driver_trips
+      .select { |d| d[:name_verified] == true }
+      .sort_by { |dt| dt[:miles] }
+      .reverse
+      .sort_by { |dt| dt[:name] }
+  end
+
   def total_miles_calc(trips)
     return 0 if trips.empty?
 
     miles = 0
-    trips.select { |tr| !tr[:invalid]}
-         .each { |t| miles += t[:miles].to_f.round } # going "to_i" always rounds down, round with no params handles the int-ness
+    # going "to_i" always rounds down, round with no params handles the int-ness
+    trips.reject { |tr| tr[:invalid] }.each { |t| miles += t[:miles].to_f.round }
     miles
   end
 
   def mph_calc(trips)
     return 0 if trips.empty?
 
-    require 'time'
     mphs = []
     trips.each do |t|
       start = Time.parse(t[:start])
       finish = Time.parse(t[:end])
       miles = t[:miles].to_f.round
-      hour_diff = (finish-start)/3600 # in seconds, /60 to get to minutes, /60 to get to hours
-      trip_mph = miles/hour_diff
+      hour_diff = (finish - start) / 3600 # in seconds, /60 to get to minutes, /60 to get to hours
+      trip_mph = miles / hour_diff
 
       if trip_mph < 5 || trip_mph > 100
         t[:invalid] = true

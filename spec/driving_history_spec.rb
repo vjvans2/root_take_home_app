@@ -66,7 +66,7 @@ RSpec.describe DrivingHistory do
 
     context 'when a driver is defined, but it isn\'t the driver of the provided trip' do
       let(:file_contents) { "Driver A\nTrip B 07:15 07:45 15.9345" }
-      let(:expected_report) { "A: 0 miles" }
+      let(:expected_report) { 'A: 0 miles' }
       it 'should return a response for Driver A of zero, but no response for B' do
         expect(subject).to eq expected_report
       end
@@ -74,7 +74,7 @@ RSpec.describe DrivingHistory do
 
     context 'when the driver is defined, but has an invalid fast trip' do
       let(:file_contents) { "Driver A\nTrip A 07:15 07:45 30\nTrip A 16:00 16:01 200" }
-      let(:expected_report) { "A: 30 miles @ 60 mph" }
+      let(:expected_report) { 'A: 30 miles @ 60 mph'}
       it 'should return a response for the valid trips of A' do
         expect(subject).to eq expected_report
       end
@@ -82,7 +82,7 @@ RSpec.describe DrivingHistory do
 
     context 'when the driver is defined, but has an invalid slow trip' do
       let(:file_contents) { "Driver A\nTrip A 07:15 07:45 30\nTrip A 16:00 16:01 2" }
-      let(:expected_report) { "A: 30 miles @ 60 mph" }
+      let(:expected_report) { 'A: 30 miles @ 60 mph'}
       it 'should return a response for the valid trips of A' do
         expect(subject).to eq expected_report
       end
@@ -90,7 +90,7 @@ RSpec.describe DrivingHistory do
 
     context 'when the driver is defined with a valid trip, but their name has a space' do
       let(:file_contents) { "Driver Mary Sue\nTrip Mary Sue 07:15 07:45 30" }
-      let(:expected_report) { "Mary Sue: 30 miles @ 60 mph" }
+      let(:expected_report) { 'Mary Sue: 30 miles @ 60 mph' }
       it 'should return a response for the valid trips of A' do
         expect(subject).to eq expected_report
       end
@@ -135,7 +135,7 @@ RSpec.describe DrivingHistory do
       end
     end
 
-    context 'when the file provided is way out in left field' do
+    context 'when the file type provided is way out in left field' do
       let(:file_contents) { "Driver A\nDriver B\nDriver C\nTrip A 07:15 07:45 15.9345\nTrip A 09:15 09:56 29.3\nTrip B 14:11 15:42 39.5" }
       let(:filename) { 'test_data.ppt' }
       it 'should return an InvalidFileError' do
