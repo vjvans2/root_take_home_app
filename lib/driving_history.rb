@@ -1,5 +1,4 @@
 class DrivingHistory
-  attr_accessor :filepath, :file_data, :driver_trips_array
 
   FILE_REGEX = '^[A-Za-z0-9\/\_\ ]+\.txt$' # any combo of directories, text, underscores, spaces as long as it has a '.txt' at the end'
   InvalidFileError = Class.new(StandardError)
@@ -27,6 +26,57 @@ class DrivingHistory
   end
 
   private
+
+  attr_accessor :filepath, :file_data, :driver_trips_array
+
+  def file_valid?
+    raise InvalidFileError, 'The provided file is not a .txt type.' if filepath.match(FILE_REGEX).nil?
+    raise InvalidFileError, 'The provided file has no contents.' if file_data.empty?
+  end
+
+  def output_report
+    dt = get_driver_trips
+    generate_output(dt)
+  end
+  
+  def get_driver_trips
+    file_data.each do |row|
+      next if row.empty?
+      
+      split = row.split(' ')
+      raise DelimiterError, 'This file does not appear to be utilizing a space as a delimiter.' if split.length == 1
+      copy_split = split.dup
+      if split[0] == 'Driver'
+        name = copy_split.tap(&:shift).join(' ')
+        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
+
+        if driver_trips_array.empty? || driver_trips_array.select { |dt| dt[:name] == name }.empty?
+            driver_trips_array <<  {name: name, trips: [], name_verified: true }
+        elsif !dt_by_name.empty? && dt_by_name[:name_verified] == false
+          dt_by_name[:name_verified] = true
+        end
+
+      elsif split[0] == 'Trip'
+        name_arr = copy_split.tap { |s| s.pop; s.pop; s.pop; s.shift; } #miles, end, start, command
+        name_differential = name_arr.length - 1
+        name = name_arr.join(' ') 
+        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
+
+        if driver_trips_array.empty? || dt_by_name.nil?
+          driver_trips_array <<  {name: name, trips: [trip_instance(split, name_differential)], name_verified: false }
+        else
+          dt_by_name[:trips] << trip_instance(split, name_differential)
+        end
+      else
+        raise InvalidCommandError, "The provided \"#{split[0]}\" command is invalid for this app."
+      end
+
+    end
+
+    raise NoDriversError, 'Drivers do not exist for all provided Trips' if driver_trips_array.all? { |d| d[:name_verified] == false }
+
+    driver_trips_array.select { |d| d[:name_verified] == true}
+  end
 
   def trip_instance(split, name_differential)
     {
@@ -87,54 +137,5 @@ class DrivingHistory
     end
 
     (mphs.sum / mphs.length).round || 0
-  end
-
-  def file_valid?
-    raise InvalidFileError, 'The provided file is not a .txt type.' if filepath.match(FILE_REGEX).nil?
-    raise InvalidFileError, 'The provided file has no contents.' if file_data.empty?
-  end
-
-  def output_report
-    dt = get_driver_trips
-    generate_output(dt)
-  end
-
-  def get_driver_trips
-    file_data.each do |row|
-      next if row.empty?
-      
-      split = row.split(' ')
-      raise DelimiterError, 'This file does not appear to be utilizing a space as a delimiter.' if split.length == 1
-      copy_split = split.dup
-      if split[0] == 'Driver'
-        name = copy_split.tap(&:shift).join(' ')
-        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
-
-        if driver_trips_array.empty? || driver_trips_array.select { |dt| dt[:name] == name }.empty?
-            driver_trips_array <<  {name: name, trips: [], name_verified: true }
-        elsif !dt_by_name.empty? && dt_by_name[:name_verified] == false
-          dt_by_name[:name_verified] = true
-        end
-
-      elsif split[0] == 'Trip'
-        name_arr = copy_split.tap { |s| s.pop; s.pop; s.pop; s.shift; } #miles, end, start, command
-        name_differential = name_arr.length - 1
-        name = name_arr.join(' ') 
-        dt_by_name = driver_trips_array.select { |dta| dta[:name] == name }.first
-
-        if driver_trips_array.empty? || dt_by_name.nil?
-          driver_trips_array <<  {name: name, trips: [trip_instance(split, name_differential)], name_verified: false }
-        else
-          dt_by_name[:trips] << trip_instance(split, name_differential)
-        end
-      else
-        raise InvalidCommandError, "The provided \"#{split[0]}\" command is invalid for this app."
-      end
-
-    end
-
-    raise NoDriversError, 'Drivers do not exist for all provided Trips' if driver_trips_array.all? { |d| d[:name_verified] == false }
-
-    driver_trips_array.select { |d| d[:name_verified] == true}
   end
 end
