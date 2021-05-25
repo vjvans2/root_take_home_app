@@ -32,6 +32,7 @@ As long as no errors were tripped, the string is returned to the `Launcher` and 
 #### Testing
 
 The process was heavily driven by TDD through the `driving_history_spec.rb` file and fringe cases are addressed and validated within the file.
+ * Manual tests with multiple and no parameters successful with the `launcher.rb`
  * Drivers and Trips can be in any order, even non-sequential. (tests #1, 2, 3)
  * Files with valid Drivers will always show a record, even if there is not a trip.  If a Trip is provided without a Driver, but there are records that have valid Driver/Trip data, then only the valid data will be shown in the report.  (tests #6, 7)
  * No limit to amount of lines or trips.  Empty lines are ignored. (tests #4, 5)
