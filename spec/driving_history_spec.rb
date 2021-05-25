@@ -7,7 +7,7 @@ require 'driving_history'
 RSpec.describe DrivingHistory do
   subject { described_class.report(filename) }
 
-  let(:filename) { 'test_data.txt' }
+  let(:filename) { 'spec/test/test_data.txt' }
   let(:file) { File.write(filename, file_contents) }
 
   before :each do
@@ -129,7 +129,7 @@ RSpec.describe DrivingHistory do
 
     context 'when the file provided is the incorrect type' do
       let(:file_contents) { "Driver A\nDriver B\nDriver C\nTrip A 07:15 07:45 15.9345\nTrip A 09:15 09:56 29.3\nTrip B 14:11 15:42 39.5" }
-      let(:filename) { 'test_data.css' }
+      let(:filename) { 'spec/test/test_data.css' }
       it 'should return an InvalidFileError' do
         expect(subject).to eq 'ERROR - DrivingHistory::InvalidFileError: The provided file is not a .txt type.'
       end
@@ -137,7 +137,7 @@ RSpec.describe DrivingHistory do
 
     context 'when the file type provided is way out in left field' do
       let(:file_contents) { "Driver A\nDriver B\nDriver C\nTrip A 07:15 07:45 15.9345\nTrip A 09:15 09:56 29.3\nTrip B 14:11 15:42 39.5" }
-      let(:filename) { 'test_data.ppt' }
+      let(:filename) { 'spec/test/test_data.ppt' }
       it 'should return an InvalidFileError' do
         expect(subject).to eq 'ERROR - DrivingHistory::InvalidFileError: The provided file is not a .txt type.'
       end
