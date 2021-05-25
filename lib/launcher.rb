@@ -2,13 +2,13 @@ require './driving_history'
 
 class Launcher
   if ARGV.empty?
-    p 'A file name argument was not provided.  Please provide a file name.'
+    p 'A file path argument was not provided.  Please provide a file path.'
     exit
   elsif ARGV.length > 1
-    p 'Too many arguments were provided.  Please only provide one file name.'
+    p 'Too many arguments were provided.  Please only provide one file path.'
     exit
   end
-  
-  filename = ARGV.first
-  p DrivingHistory.report(filename)
+
+  filepath = ARGV.first
+  p DrivingHistory.report(filepath)
 end

@@ -122,7 +122,6 @@ class DrivingHistory
       .select { |d| d[:name_verified] == true }
       .sort_by { |dt| dt[:miles] }
       .reverse
-      .sort_by { |dt| dt[:name] }
   end
 
   def total_miles_calc(trips)
@@ -152,6 +151,8 @@ class DrivingHistory
 
       mphs << trip_mph
     end
+
+    return 0 if mphs.empty?
 
     (mphs.sum / mphs.length).round || 0
   end
